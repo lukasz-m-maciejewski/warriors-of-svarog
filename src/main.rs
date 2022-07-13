@@ -1,10 +1,14 @@
-use rltk::{GameState, Rltk, VirtualKeyCode, RGB};
+use rltk::{GameState, Rltk, RGB};
 use specs::prelude::*;
-use specs_derive::Component;
-use std::cmp::{max, min};
 
+mod components;
+pub use components::*;
 mod map;
 pub use map::*;
+mod player;
+use player::*;
+mod rect;
+pub use rect::Rect;
 
 fn main() -> rltk::BError {
     use rltk::RltkBuilder;
@@ -17,11 +21,13 @@ fn main() -> rltk::BError {
     gs.ecs.register::<Renderable>();
     gs.ecs.register::<Player>();
 
-    gs.ecs.insert(new_map_with_rooms_and_corridors());
+    let (rooms, map) = new_map_with_rooms_and_corridors();
+    gs.ecs.insert(map);
+    let (player_x, player_y) = rooms[0].center();
 
     gs.ecs
         .create_entity()
-        .with(Position { x: 40, y: 25 })
+        .with(Position { x: player_x, y: player_y })
         .with(Renderable {
             glyph: rltk::to_cp437('@'),
             fg: RGB::named(rltk::YELLOW),
@@ -33,8 +39,14 @@ fn main() -> rltk::BError {
     rltk::main_loop(context, gs)
 }
 
-struct State {
+pub struct State {
     ecs: World,
+}
+
+impl State {
+    fn run_systems(&mut self) {
+        self.ecs.maintain();
+    }
 }
 
 impl GameState for State {
@@ -55,114 +67,3 @@ impl GameState for State {
         }
     }
 }
-
-impl State {
-    fn run_systems(&mut self) {
-        self.ecs.maintain();
-    }
-}
-
-#[derive(Component)]
-struct Position {
-    x: i32,
-    y: i32,
-}
-
-struct Move {
-    delta_x: i32,
-    delta_y: i32,
-}
-
-impl Move {
-    fn left() -> Move {
-        Move {
-            delta_x: -1,
-            delta_y: 0,
-        }
-    }
-
-    fn right() -> Move {
-        Move {
-            delta_x: 1,
-            delta_y: 0,
-        }
-    }
-
-    fn up() -> Move {
-        Move {
-            delta_x: 0,
-            delta_y: -1,
-        }
-    }
-
-    fn down() -> Move {
-        Move {
-            delta_x: 0,
-            delta_y: 1,
-        }
-    }
-}
-
-#[derive(Component)]
-struct Renderable {
-    glyph: rltk::FontCharType,
-    fg: RGB,
-    bg: RGB,
-}
-
-#[derive(Component, Debug)]
-struct Player {}
-
-fn try_move_player(mv: Move, ecs: &mut World) {
-    let mut positions = ecs.write_storage::<Position>();
-    let mut players = ecs.write_storage::<Player>();
-    let map = ecs.fetch::<Vec<TileType>>();
-
-    for (_player, pos) in (&mut players, &mut positions).join() {
-        let destination_idx = xy_idx(pos.x + mv.delta_x, pos.y + mv.delta_y);
-        if map[destination_idx] != TileType::Wall {
-            pos.x = min(79, max(0, pos.x + mv.delta_x));
-            pos.y = min(49, max(0, pos.y + mv.delta_y));
-        }
-    }
-}
-
-fn player_input(gs: &mut State, ctx: &mut Rltk) {
-    match ctx.key {
-        None => {}
-        Some(key) => match key {
-            VirtualKeyCode::Left => try_move_player(Move::left(), &mut gs.ecs),
-            VirtualKeyCode::Right => try_move_player(Move::right(), &mut gs.ecs),
-            VirtualKeyCode::Up => try_move_player(Move::up(), &mut gs.ecs),
-            VirtualKeyCode::Down => try_move_player(Move::down(), &mut gs.ecs),
-            _ => {}
-        },
-    }
-}
-
-pub fn xy_idx(x: i32, y: i32) -> usize {
-    (y as usize * 80) + x as usize
-}
-
-fn draw_map(map: &[TileType], ctx: &mut Rltk) {
-    let mut y = 0;
-    let mut x = 0;
-
-    for tile in map.iter() {
-        match tile {
-            TileType::Floor => {
-                ctx.set(x, y, RGB::from_f32(0.5, 0.5, 0.5), RGB::from_f32(0., 0., 0.), rltk::to_cp437('.'));
-            }
-            TileType::Wall => {
-                ctx.set(x, y, RGB::from_f32(0.0, 1.0, 0.0), RGB::from_f32(0., 0., 0.), rltk::to_cp437('#'));
-            }
-        }
-
-        x += 1;
-        if x > 79 {
-            x = 0;
-            y += 1;
-        }
-    }
-}
-
