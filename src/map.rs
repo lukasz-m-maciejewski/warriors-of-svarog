@@ -1,5 +1,6 @@
-use super::Rect;
-use rltk::{Algorithm2D, BaseMap, RandomNumberGenerator, Rltk, RGB};
+use super::{Player, Rect, Viewshed, World};
+use rltk::{Algorithm2D, BaseMap, Point, RandomNumberGenerator, Rltk, RGB};
+use specs::{Join, WorldExt};
 use std::cmp::{max, min};
 
 #[derive(PartialEq, Copy, Clone)]
@@ -23,7 +24,8 @@ impl Map {
     fn apply_room_to_map(&mut self, room: &Rect) {
         for y in room.y1 + 1..=room.y2 {
             for x in room.x1 + 1..=room.x2 {
-                self.tiles[self.xy_idx(x, y)] = TileType::Floor;
+                let idx = self.xy_idx(x, y);
+                self.tiles[idx] = TileType::Floor;
             }
         }
     }
@@ -62,36 +64,45 @@ impl BaseMap for Map {
     }
 }
 
-pub fn draw_map(map: &[TileType], ctx: &mut Rltk) {
-    let mut y = 0;
-    let mut x = 0;
+pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
+    let mut viewsheds = ecs.write_storage::<Viewshed>();
+    let mut players = ecs.write_storage::<Player>();
+    let map = ecs.fetch::<Map>();
 
-    for tile in map.iter() {
-        match tile {
-            TileType::Floor => {
-                ctx.set(
-                    x,
-                    y,
-                    RGB::from_f32(0.5, 0.5, 0.5),
-                    RGB::from_f32(0., 0., 0.),
-                    rltk::to_cp437('.'),
-                );
-            }
-            TileType::Wall => {
-                ctx.set(
-                    x,
-                    y,
-                    RGB::from_f32(0.0, 1.0, 0.0),
-                    RGB::from_f32(0., 0., 0.),
-                    rltk::to_cp437('#'),
-                );
-            }
-        }
+    for (_player, viewshed) in (&mut players, &mut viewsheds).join() {
+        let mut y = 0;
+        let mut x = 0;
 
-        x += 1;
-        if x > 79 {
-            x = 0;
-            y += 1;
+        for tile in map.tiles.iter() {
+            let pt = Point::new(x, y);
+            if viewshed.visible_tiles.contains(&pt) {
+                match tile {
+                    TileType::Floor => {
+                        ctx.set(
+                            x,
+                            y,
+                            RGB::from_f32(0.5, 0.5, 0.5),
+                            RGB::from_f32(0., 0., 0.),
+                            rltk::to_cp437('.'),
+                        );
+                    }
+                    TileType::Wall => {
+                        ctx.set(
+                            x,
+                            y,
+                            RGB::from_f32(0.0, 1.0, 0.0),
+                            RGB::from_f32(0., 0., 0.),
+                            rltk::to_cp437('#'),
+                        );
+                    }
+                }
+            }
+
+            x += 1;
+            if x > 79 {
+                x = 0;
+                y += 1;
+            }
         }
     }
 }
@@ -107,12 +118,16 @@ pub fn new_map_test() -> Map {
     };
 
     for x in 0..80 {
-        map.tiles[map.xy_idx(x, 0)] = TileType::Wall;
-        map.tiles[map.xy_idx(x, 49)] = TileType::Wall;
+        let idx =map.xy_idx(x, 0);
+        map.tiles[idx] = TileType::Wall;
+        let idx = map.xy_idx(x, 49);
+        map.tiles[idx] = TileType::Wall;
     }
     for y in 0..50 {
-        map.tiles[map.xy_idx(0, y)] = TileType::Wall;
-        map.tiles[map.xy_idx(79, y)] = TileType::Wall;
+        let idx = map.xy_idx(0, y);
+        map.tiles[idx] = TileType::Wall;
+        let idx = map.xy_idx(79, y);
+        map.tiles[idx] = TileType::Wall;
     }
 
     let mut rng = rltk::RandomNumberGenerator::new();
@@ -137,7 +152,6 @@ pub fn new_map_with_rooms_and_corridors() -> Map {
         height: 50,
     };
 
-    let mut rooms: Vec<Rect> = Vec::new();
     const MAX_ROOMS: i32 = 30;
     const MIN_SIZE: i32 = 6;
     const MAX_SIZE: i32 = 10;
@@ -151,17 +165,17 @@ pub fn new_map_with_rooms_and_corridors() -> Map {
         let y = rng.roll_dice(1, 50 - h - 1) - 1;
         let new_room = Rect::new(x, y, w, h);
         let mut ok = true;
-        for other_room in rooms.iter() {
+        for other_room in map.rooms.iter() {
             if new_room.intersect(other_room) {
-                ok = false
+                ok = false;
             }
         }
         if ok {
             map.apply_room_to_map(&new_room);
 
-            if !rooms.is_empty() {
+            if !map.rooms.is_empty() {
                 let (new_x, new_y) = new_room.center();
-                let (prev_x, prev_y) = rooms[rooms.len() - 1].center();
+                let (prev_x, prev_y) = map.rooms[map.rooms.len() - 1].center();
                 if rng.range(0, 2) == 1 {
                     map.apply_horizontal_tunnel(prev_x, new_x, prev_y);
                     map.apply_vertical_tunnel(prev_y, new_y, new_x);
@@ -171,7 +185,7 @@ pub fn new_map_with_rooms_and_corridors() -> Map {
                 }
             }
 
-            rooms.push(new_room);
+            map.rooms.push(new_room);
         }
     }
 

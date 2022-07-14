@@ -1,4 +1,4 @@
-use super::{xy_idx, Player, Position, State, TileType};
+use super::{Map, Player, Position, State, TileType};
 use rltk::{Rltk, VirtualKeyCode};
 use specs::prelude::*;
 use std::cmp::{max, min};
@@ -41,11 +41,11 @@ impl Move {
 fn try_move_player(mv: Move, ecs: &mut World) {
     let mut positions = ecs.write_storage::<Position>();
     let mut players = ecs.write_storage::<Player>();
-    let map = ecs.fetch::<Vec<TileType>>();
+    let map = ecs.fetch::<Map>();
 
     for (_player, pos) in (&mut players, &mut positions).join() {
-        let destination_idx = xy_idx(pos.x + mv.delta_x, pos.y + mv.delta_y);
-        if map[destination_idx] != TileType::Wall {
+        let destination_idx = map.xy_idx(pos.x + mv.delta_x, pos.y + mv.delta_y);
+        if map.tiles[destination_idx] != TileType::Wall {
             pos.x = min(79, max(0, pos.x + mv.delta_x));
             pos.y = min(49, max(0, pos.y + mv.delta_y));
         }
