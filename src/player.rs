@@ -1,6 +1,4 @@
-use crate::Viewshed;
-
-use super::{Map, Player, Position, State, TileType};
+use super::{Map, Player, Position, RunState, State, TileType, Viewshed};
 use rltk::{Rltk, VirtualKeyCode};
 use specs::prelude::*;
 use std::cmp::{max, min};
@@ -52,14 +50,18 @@ fn try_move_player(mv: Move, ecs: &mut World) {
             pos.x = min(map.width - 1, max(0, pos.x + mv.delta_x));
             pos.y = min(map.height - 1, max(0, pos.y + mv.delta_y));
 
+            let mut ppos = ecs.write_resource::<rltk::Point>();
+            ppos.x = pos.x;
+            ppos.y = pos.y;
+
             viewshed.dirty = true;
         }
     }
 }
 
-pub fn player_input(gs: &mut State, ctx: &mut Rltk) {
+pub fn player_input(gs: &mut State, ctx: &mut Rltk) -> RunState {
     match ctx.key {
-        None => {}
+        None => return RunState::Paused,
         Some(key) => match key {
             VirtualKeyCode::Left | VirtualKeyCode::Numpad4 | VirtualKeyCode::H => {
                 try_move_player(Move::left(), &mut gs.ecs)
@@ -77,7 +79,9 @@ pub fn player_input(gs: &mut State, ctx: &mut Rltk) {
                 try_move_player(Move::down(), &mut gs.ecs)
             }
 
-            _ => {}
+            _ => return RunState::Paused,
         },
     }
+
+    RunState::Running
 }
