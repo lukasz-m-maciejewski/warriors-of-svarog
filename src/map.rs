@@ -1,5 +1,5 @@
 use super::{Rect, World};
-use rltk::{Algorithm2D, BaseMap, RandomNumberGenerator, Rltk, RGB};
+use rltk::{console, Algorithm2D, BaseMap, RandomNumberGenerator, Rltk, RGB};
 use std::cmp::{max, min};
 
 #[derive(PartialEq, Copy, Clone)]
@@ -56,20 +56,6 @@ impl Map {
         let idx = self.xy_idx(x, y);
         self.tiles[idx] != TileType::Wall
     }
-
-    fn get_available_exits(&self, idx: usize) -> rltk::SmallVec<[(usize, f32); 10]> {
-        let mut exits = rltk::SmallVec::new();
-        let x = idx as i32 % self.width;
-        let y = idx as i32 / self.width;
-        let w = self.width as usize;
-
-        if self.is_exit_valid(x - 1, y) { exits.push((idx - 1, 1.0)) }
-        if self.is_exit_valid(x + 1, y) { exits.push((idx + 1, 1.0)) }
-        if self.is_exit_valid(x, y - 1) { exits.push((idx - w, 1.0)) }
-        if self.is_exit_valid(x, y + 1) { exits.push((idx + w, 1.0)) }
-
-        exits
-    }
 }
 
 impl Algorithm2D for Map {
@@ -84,6 +70,28 @@ impl Algorithm2D for Map {
 impl BaseMap for Map {
     fn is_opaque(&self, idx: usize) -> bool {
         self.tiles[idx] == TileType::Wall
+    }
+
+    fn get_available_exits(&self, idx: usize) -> rltk::SmallVec<[(usize, f32); 10]> {
+        let mut exits = rltk::SmallVec::new();
+        let x = idx as i32 % self.width;
+        let y = idx as i32 / self.width;
+        let w = self.width as usize;
+
+        if self.is_exit_valid(x - 1, y) {
+            exits.push((idx - 1, 1.0))
+        }
+        if self.is_exit_valid(x + 1, y) {
+            exits.push((idx + 1, 1.0))
+        }
+        if self.is_exit_valid(x, y - 1) {
+            exits.push((idx - w, 1.0))
+        }
+        if self.is_exit_valid(x, y + 1) {
+            exits.push((idx + w, 1.0))
+        }
+
+        exits
     }
 
     fn get_pathing_distance(&self, idx1: usize, idx2: usize) -> f32 {
