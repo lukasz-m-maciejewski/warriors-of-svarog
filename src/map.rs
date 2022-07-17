@@ -1,5 +1,5 @@
 use super::{Rect, World};
-use rltk::{console, Algorithm2D, BaseMap, RandomNumberGenerator, Rltk, RGB};
+use rltk::{Algorithm2D, BaseMap, RandomNumberGenerator, Rltk, RGB};
 use std::cmp::{max, min};
 
 #[derive(PartialEq, Copy, Clone)]
@@ -15,6 +15,7 @@ pub struct Map {
     pub height: i32,
     pub revealed_tiles: Vec<bool>,
     pub visible_tiles: Vec<bool>,
+    pub blocked: Vec<bool>,
 }
 
 impl Map {
@@ -54,7 +55,13 @@ impl Map {
             return false;
         }
         let idx = self.xy_idx(x, y);
-        self.tiles[idx] != TileType::Wall
+        !self.blocked[idx]
+    }
+
+    pub fn populate_blocked(&mut self) {
+        for (i, tile) in self.tiles.iter_mut().enumerate() {
+            self.blocked[i] = *tile == TileType::Wall;
+        }
     }
 }
 
@@ -89,6 +96,19 @@ impl BaseMap for Map {
         }
         if self.is_exit_valid(x, y + 1) {
             exits.push((idx + w, 1.0))
+        }
+
+        if self.is_exit_valid(x - 1, y - 1) {
+            exits.push((idx - w - 1, 1.45))
+        }
+        if self.is_exit_valid(x + 1, y - 1) {
+            exits.push((idx - w + 1, 1.45))
+        }
+        if self.is_exit_valid(x - 1, y + 1) {
+            exits.push((idx + w - 1, 1.45))
+        }
+        if self.is_exit_valid(x + 1, y + 1) {
+            exits.push((idx + w + 1, 1.45))
         }
 
         exits
@@ -149,6 +169,7 @@ pub fn new_map_test() -> Map {
         height: 50,
         revealed_tiles: vec![false; 80 * 50],
         visible_tiles: vec![false; 80 * 50],
+        blocked: vec![false; 80 * 50],
     };
 
     for x in 0..80 {
@@ -186,6 +207,7 @@ pub fn new_map_with_rooms_and_corridors() -> Map {
         height: 50,
         revealed_tiles: vec![false; 80 * 50],
         visible_tiles: vec![false; 80 * 50],
+        blocked: vec![false; 80 * 50],
     };
 
     const MAX_ROOMS: i32 = 30;
