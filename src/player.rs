@@ -1,7 +1,7 @@
 use crate::{CombatStats, WantsToMelee};
 
 use super::{Map, Player, Position, RunState, State, Viewshed};
-use rltk::{console, Rltk, VirtualKeyCode};
+use rltk::{Rltk, VirtualKeyCode};
 use specs::prelude::*;
 use std::cmp::{max, min};
 
@@ -92,12 +92,14 @@ fn try_move_player(mv: Move, ecs: &mut World) {
         for potential_target in map.tile_content[destination_idx].iter() {
             let target = combat_stats.get(*potential_target);
             if let Some(_target) = target {
-                wants_to_melee.insert(
-                    entity,
-                    WantsToMelee {
-                        target: *potential_target,
-                    },
-                );
+                wants_to_melee
+                    .insert(
+                        entity,
+                        WantsToMelee {
+                            target: *potential_target,
+                        },
+                    )
+                    .expect("Unable to insert attack");
                 return;
             }
         }
@@ -117,7 +119,7 @@ fn try_move_player(mv: Move, ecs: &mut World) {
 
 pub fn player_input(gs: &mut State, ctx: &mut Rltk) -> RunState {
     match ctx.key {
-        None => return RunState::Paused,
+        None => return RunState::AwaitingInput,
         Some(key) => match key {
             VirtualKeyCode::Left | VirtualKeyCode::Numpad4 | VirtualKeyCode::H => {
                 try_move_player(Move::left(), &mut gs.ecs)
@@ -135,10 +137,10 @@ pub fn player_input(gs: &mut State, ctx: &mut Rltk) -> RunState {
                 try_move_player(Move::down(), &mut gs.ecs)
             }
 
-            VirtualKeyCode::Numpad9 | VirtualKeyCode::Y => {
+            VirtualKeyCode::Numpad9 | VirtualKeyCode::U => {
                 try_move_player(Move::up_right(), &mut gs.ecs)
             }
-            VirtualKeyCode::Numpad7 | VirtualKeyCode::U => {
+            VirtualKeyCode::Numpad7 | VirtualKeyCode::Y => {
                 try_move_player(Move::up_left(), &mut gs.ecs)
             }
             VirtualKeyCode::Numpad3 | VirtualKeyCode::N => {
@@ -148,9 +150,9 @@ pub fn player_input(gs: &mut State, ctx: &mut Rltk) -> RunState {
                 try_move_player(Move::down_left(), &mut gs.ecs)
             }
 
-            _ => return RunState::Paused,
+            _ => return RunState::AwaitingInput,
         },
     }
 
-    RunState::Running
+    RunState::PlayerTurn
 }
