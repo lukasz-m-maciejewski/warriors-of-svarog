@@ -1,5 +1,7 @@
+use crate::CombatStats;
+
 use super::{Map, Player, Position, RunState, State, Viewshed};
-use rltk::{Rltk, VirtualKeyCode};
+use rltk::{console, Rltk, VirtualKeyCode};
 use specs::prelude::*;
 use std::cmp::{max, min};
 
@@ -70,10 +72,23 @@ fn try_move_player(mv: Move, ecs: &mut World) {
     let mut positions = ecs.write_storage::<Position>();
     let mut players = ecs.write_storage::<Player>();
     let mut viewsheds = ecs.write_storage::<Viewshed>();
+    let combat_stats = ecs.read_storage::<CombatStats>();
     let map = ecs.fetch::<Map>();
 
     for (_player, pos, viewshed) in (&mut players, &mut positions, &mut viewsheds).join() {
         let destination_idx = map.xy_idx(pos.x + mv.delta_x, pos.y + mv.delta_y);
+
+        for potential_target in map.tile_content[destination_idx].iter() {
+            let target = combat_stats.get(*potential_target);
+            match target {
+                None => {}
+                Some(_t) => {
+                    console::log(&format!("From Hell's Heard, I stab thee!"));
+                    return;
+                }
+            }
+        }
+
         if !map.blocked[destination_idx] {
             pos.x = min(map.width - 1, max(0, pos.x + mv.delta_x));
             pos.y = min(map.height - 1, max(0, pos.y + mv.delta_y));

@@ -1,11 +1,17 @@
 use super::{Rect, World};
 use rltk::{Algorithm2D, BaseMap, RandomNumberGenerator, Rltk, RGB};
+use specs::Entity;
 use std::cmp::{max, min};
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum TileType {
     Wall,
     Floor,
+}
+
+pub struct Dimentions {
+    pub width: i32,
+    pub height: i32,
 }
 
 pub struct Map {
@@ -16,9 +22,23 @@ pub struct Map {
     pub revealed_tiles: Vec<bool>,
     pub visible_tiles: Vec<bool>,
     pub blocked: Vec<bool>,
+    pub tile_content: Vec<Vec<Entity>>,
 }
 
 impl Map {
+    pub fn new(default_tile: TileType, d: Dimentions) -> Map {
+        let num_tiles = (d.width * d.height) as usize;
+        Map {
+            tiles: vec![default_tile; num_tiles],
+            rooms: Vec::new(),
+            width: d.width,
+            height: d.height,
+            revealed_tiles: vec![false; num_tiles],
+            visible_tiles: vec![false; num_tiles],
+            blocked: vec![false; num_tiles],
+            tile_content: vec![Vec::new(); num_tiles],
+        }
+    }
     pub fn xy_idx(&self, x: i32, y: i32) -> usize {
         (y as usize * self.width as usize) + x as usize
     }
@@ -61,6 +81,12 @@ impl Map {
     pub fn populate_blocked(&mut self) {
         for (i, tile) in self.tiles.iter_mut().enumerate() {
             self.blocked[i] = *tile == TileType::Wall;
+        }
+    }
+
+    pub fn clear_content_index(&mut self) {
+        for content in self.tile_content.iter_mut() {
+            content.clear();
         }
     }
 }
@@ -162,15 +188,13 @@ pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
 /// Makes a map with solid boundaries and 400 randomly placed walls.
 /// No guarantees that it won't look awful.
 pub fn new_map_test() -> Map {
-    let mut map = Map {
-        tiles: vec![TileType::Floor; 80 * 50],
-        rooms: Vec::new(),
-        width: 80,
-        height: 50,
-        revealed_tiles: vec![false; 80 * 50],
-        visible_tiles: vec![false; 80 * 50],
-        blocked: vec![false; 80 * 50],
-    };
+    let mut map = Map::new(
+        TileType::Floor,
+        Dimentions {
+            width: 80,
+            height: 50,
+        },
+    );
 
     for x in 0..80 {
         let idx = map.xy_idx(x, 0);
@@ -200,15 +224,13 @@ pub fn new_map_test() -> Map {
 }
 
 pub fn new_map_with_rooms_and_corridors() -> Map {
-    let mut map = Map {
-        tiles: vec![TileType::Wall; 80 * 50],
-        rooms: Vec::new(),
-        width: 80,
-        height: 50,
-        revealed_tiles: vec![false; 80 * 50],
-        visible_tiles: vec![false; 80 * 50],
-        blocked: vec![false; 80 * 50],
-    };
+    let mut map = Map::new(
+        TileType::Wall,
+        Dimentions {
+            width: 80,
+            height: 50,
+        },
+    );
 
     const MAX_ROOMS: i32 = 30;
     const MIN_SIZE: i32 = 6;
