@@ -9,7 +9,7 @@ pub enum TileType {
     Floor,
 }
 
-pub struct Dimentions {
+pub struct Dimensions {
     pub width: i32,
     pub height: i32,
 }
@@ -26,7 +26,7 @@ pub struct Map {
 }
 
 impl Map {
-    pub fn new(default_tile: TileType, d: Dimentions) -> Map {
+    pub fn new(default_tile: TileType, d: Dimensions) -> Map {
         let num_tiles = (d.width * d.height) as usize;
         Map {
             tiles: vec![default_tile; num_tiles],
@@ -43,6 +43,10 @@ impl Map {
         (y as usize * self.width as usize) + x as usize
     }
 
+    pub fn idx_in_range(& self, idx: usize) -> bool {
+        (idx as i32) < (self.width * self.height)
+    }
+
     fn apply_room_to_map(&mut self, room: &Rect) {
         for y in room.y1 + 1..=room.y2 {
             for x in room.x1 + 1..=room.x2 {
@@ -55,7 +59,7 @@ impl Map {
     fn apply_horizontal_tunnel(&mut self, x1: i32, x2: i32, y: i32) {
         for x in min(x1, x2)..=max(x1, x2) {
             let idx = self.xy_idx(x, y);
-            if idx > 0 && idx < 80 * 50 {
+            if self.idx_in_range(idx) {
                 self.tiles[idx] = TileType::Floor;
             }
         }
@@ -64,7 +68,7 @@ impl Map {
     fn apply_vertical_tunnel(&mut self, y1: i32, y2: i32, x: i32) {
         for y in min(y1, y2)..=max(y1, y2) {
             let idx = self.xy_idx(x, y);
-            if idx > 0 && idx < 80 * 50 {
+            if self.idx_in_range(idx) {
                 self.tiles[idx] = TileType::Floor;
             }
         }
@@ -187,22 +191,22 @@ pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
 
 /// Makes a map with solid boundaries and 400 randomly placed walls.
 /// No guarantees that it won't look awful.
-pub fn new_map_test() -> Map {
+pub fn new_map_test(d: Dimensions) -> Map {
     let mut map = Map::new(
         TileType::Floor,
-        Dimentions {
-            width: 80,
-            height: 50,
+        Dimensions {
+            width: d.width,
+            height: d.height,
         },
     );
 
-    for x in 0..80 {
+    for x in 0..d.width {
         let idx = map.xy_idx(x, 0);
         map.tiles[idx] = TileType::Wall;
         let idx = map.xy_idx(x, 49);
         map.tiles[idx] = TileType::Wall;
     }
-    for y in 0..50 {
+    for y in 0..d.height {
         let idx = map.xy_idx(0, y);
         map.tiles[idx] = TileType::Wall;
         let idx = map.xy_idx(79, y);
@@ -212,10 +216,10 @@ pub fn new_map_test() -> Map {
     let mut rng = rltk::RandomNumberGenerator::new();
 
     for _i in 0..400 {
-        let x = rng.roll_dice(1, 79);
-        let y = rng.roll_dice(1, 49);
+        let x = rng.roll_dice(1, d.width - 1);
+        let y = rng.roll_dice(1, d.height - 1);
         let idx = map.xy_idx(x, y);
-        if idx != map.xy_idx(40, 25) {
+        if idx != map.xy_idx(d.width / 2, d.height / 2) {
             map.tiles[idx] = TileType::Wall;
         }
     }
@@ -223,12 +227,12 @@ pub fn new_map_test() -> Map {
     map
 }
 
-pub fn new_map_with_rooms_and_corridors() -> Map {
+pub fn new_map_with_rooms_and_corridors(d: Dimensions) -> Map {
     let mut map = Map::new(
         TileType::Wall,
-        Dimentions {
-            width: 80,
-            height: 50,
+        Dimensions {
+            width: d.width,
+            height: d.height,
         },
     );
 
@@ -241,8 +245,8 @@ pub fn new_map_with_rooms_and_corridors() -> Map {
     for _i in 0..MAX_ROOMS {
         let w = rng.range(MIN_SIZE, MAX_SIZE);
         let h = rng.range(MIN_SIZE, MAX_SIZE);
-        let x = rng.roll_dice(1, 80 - w - 1) - 1;
-        let y = rng.roll_dice(1, 50 - h - 1) - 1;
+        let x = rng.roll_dice(1, d.width - w - 1) - 1;
+        let y = rng.roll_dice(1, d.height - h - 1) - 1;
         let new_room = Rect::new(x, y, w, h);
         let mut ok = true;
         for other_room in map.rooms.iter() {

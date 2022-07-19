@@ -19,12 +19,14 @@ mod melee_combat_system;
 use melee_combat_system::MeleeCombatSystem;
 mod damage_system;
 use damage_system::DamageSystem;
+mod gui;
 
 fn main() -> rltk::BError {
     use rltk::RltkBuilder;
-    let context = RltkBuilder::simple80x50()
+    let mut context = RltkBuilder::simple80x50()
         .with_title("Warriors of Svarog")
         .build()?;
+    context.with_post_scanlines(true);
     let mut gs = State { ecs: World::new() };
 
     gs.ecs.register::<Position>();
@@ -38,7 +40,7 @@ fn main() -> rltk::BError {
     gs.ecs.register::<WantsToMelee>();
     gs.ecs.register::<SufferDamage>();
 
-    let map = new_map_with_rooms_and_corridors();
+    let map = new_map_with_rooms_and_corridors(Dimensions{width: 80, height: 43});
     let (player_x, player_y) = map.rooms[0].center();
 
     let mut rng = rltk::RandomNumberGenerator::new();
@@ -197,5 +199,7 @@ impl GameState for State {
                 ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
             }
         }
+
+        gui::draw_ui(&self.ecs, ctx);
     }
 }
