@@ -19,6 +19,7 @@ mod melee_combat_system;
 use melee_combat_system::MeleeCombatSystem;
 mod damage_system;
 use damage_system::DamageSystem;
+mod gamelog;
 mod gui;
 
 fn main() -> rltk::BError {
@@ -40,7 +41,10 @@ fn main() -> rltk::BError {
     gs.ecs.register::<WantsToMelee>();
     gs.ecs.register::<SufferDamage>();
 
-    let map = new_map_with_rooms_and_corridors(Dimensions{width: 80, height: 43});
+    let map = new_map_with_rooms_and_corridors(Dimensions {
+        width: 80,
+        height: 43,
+    });
     let (player_x, player_y) = map.rooms[0].center();
 
     let mut rng = rltk::RandomNumberGenerator::new();
@@ -121,6 +125,9 @@ fn main() -> rltk::BError {
     gs.ecs.insert(rltk::Point::new(player_x, player_y));
     gs.ecs.insert(player_entity);
     gs.ecs.insert(RunState::PreRun);
+    gs.ecs.insert(gamelog::GameLog {
+        entries: vec!["Welcome to Warriors of Svarog".to_string()],
+    });
 
     rltk::main_loop(context, gs)
 }
@@ -131,6 +138,7 @@ pub enum RunState {
     PreRun,
     PlayerTurn,
     MonsterTurn,
+    PlayerIsDead,
 }
 
 pub struct State {
@@ -178,6 +186,9 @@ impl GameState for State {
             RunState::MonsterTurn => {
                 self.run_systems();
                 newrunstate = RunState::AwaitingInput;
+            }
+            RunState::PlayerIsDead => {
+
             }
         }
 

@@ -1,7 +1,7 @@
-use rltk::{Console, Rltk, RGB};
+use rltk::{Rltk, RGB};
 use specs::prelude::*;
 
-use crate::{CombatStats, Player};
+use crate::{gamelog::GameLog, CombatStats, Player};
 
 pub fn draw_ui(ecs: &World, ctx: &mut Rltk) {
     ctx.draw_box(
@@ -34,5 +34,17 @@ pub fn draw_ui(ecs: &World, ctx: &mut Rltk) {
             RGB::named(rltk::RED),
             RGB::named(rltk::BLACK),
         );
+    }
+
+    let log = ecs.fetch::<GameLog>();
+
+    let mut y = 44;
+    for s in log.entries.iter().rev() {
+        if y < 49 {
+            ctx.print(2, y, s);
+        } else {
+            break;
+        }
+        y += 1;
     }
 }
