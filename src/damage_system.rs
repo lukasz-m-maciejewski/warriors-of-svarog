@@ -1,4 +1,4 @@
-use crate::{RunState, gamelog::GameLog, Name};
+use crate::{gamelog::GameLog, Name, RunState};
 
 use super::{CombatStats, Player, SufferDamage};
 use specs::prelude::*;
@@ -42,12 +42,12 @@ pub fn delete_the_dead(ecs: &mut World) {
                         if let Some(victim_name) = victim_name {
                             log.entries.push(format!("{} is dead", &victim_name.name));
                         }
-                        dead.push(entity)}
-                    ,
+                        dead.push(entity)
+                    }
                     Some(_) => {
                         *run_state = RunState::PlayerIsDead;
                         log.entries.push("You are dead!".to_string());
-                    },
+                    }
                 }
             }
         }

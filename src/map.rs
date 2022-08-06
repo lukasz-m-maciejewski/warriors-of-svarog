@@ -43,7 +43,7 @@ impl Map {
         (y as usize * self.width as usize) + x as usize
     }
 
-    pub fn idx_in_range(& self, idx: usize) -> bool {
+    pub fn idx_in_range(&self, idx: usize) -> bool {
         (idx as i32) < (self.width * self.height)
     }
 

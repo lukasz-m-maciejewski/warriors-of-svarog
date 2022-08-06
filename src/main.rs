@@ -188,9 +188,7 @@ impl GameState for State {
                 self.run_systems();
                 newrunstate = RunState::AwaitingInput;
             }
-            RunState::PlayerIsDead => {
-
-            }
+            RunState::PlayerIsDead => {}
         }
 
         {
