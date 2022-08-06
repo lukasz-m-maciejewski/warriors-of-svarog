@@ -128,6 +128,7 @@ fn main() -> rltk::BError {
     gs.ecs.insert(gamelog::GameLog {
         entries: vec!["Welcome to Warriors of Svarog".to_string()],
     });
+    gs.ecs.insert(rltk::RandomNumberGenerator::new());
 
     rltk::main_loop(context, gs)
 }
